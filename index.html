@@ -10,6 +10,27 @@
     <meta name="apple-mobile-web-app-title" content="AuraCycle" />
     <link rel="manifest" href="./manifest.json" />
     <title>AuraCycle - Monitor de Ciclos Irregulares</title>
+    <script>
+      // Auto-recuperación si un asset antiguo cached falla al cargar
+      window.addEventListener('error', function(e) {
+        if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+          console.warn('Recuperando de asset no encontrado en caché...');
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              for (var r of regs) r.unregister();
+              if ('caches' in window) {
+                caches.keys().then(function(keys) {
+                  for (var k of keys) caches.delete(k);
+                  window.location.reload();
+                });
+              } else {
+                window.location.reload();
+              }
+            });
+          }
+        }
+      }, true);
+    </script>
     <style>
       /* iOS Native Smooth scrolling and safe area support */
       html {
@@ -33,7 +54,9 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js').catch(err => {
+          navigator.serviceWorker.register('./sw.js').then(reg => {
+            reg.update();
+          }).catch(err => {
             console.log('SW registration failed:', err);
           });
         });
